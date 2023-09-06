@@ -7,6 +7,11 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Scanner;
 
 public class Main {
+    static final String DISPLAY_PATTERN = "yyyy-MM-dd HH:mm:ss";
+    static final Format[] PATTERNS = new Format[]{
+        new Format("yyyy-MM-dd HH:mm:ss", false),
+        new Format("yyyy-MM-dd", true),
+        new Format("dd.MM.yyyy HH:mm:ss", false)};
 
     public static void main(String[] args) {
         Main main = new Main();
@@ -16,51 +21,35 @@ public class Main {
     public void run(Scanner scanner) {
         // uzupełnij rozwiązanie. Korzystaj z przekazanego w parametrze scannera
 
-        Format[] patterns = Format.values();
-
-        ZonedDateTime defaultDateTime = getDateTime(scanner, patterns);
+        ZonedDateTime defaultDateTime = getDateTime(scanner);
 
         if (defaultDateTime == null) {
             System.out.println("Nie udało się utworzyć daty");
         } else {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Format.DATE_TIME_WITH_DASH.getFormat());
-
-            System.out.println("Czas lokalny: " + defaultDateTime.format(formatter));
-
-            String utcTime = getTimeAtZone(defaultDateTime, "UTC");
-            System.out.println("UTC: " + utcTime);
-
-            String londonTime = getTimeAtZone(defaultDateTime, "Europe/London");
-            System.out.println("Londyn: " + londonTime);
-
-            String losAngelesTime = getTimeAtZone(defaultDateTime, "America/Los_Angeles");
-            System.out.println("Los Angeles: " + losAngelesTime);
-
-            String sydneyTime = getTimeAtZone(defaultDateTime, "Australia/Sydney");
-            System.out.println("Sydney: " + sydneyTime);
+            showTimeAtDifferentZones(defaultDateTime);
         }
     }
 
-    private void showAvailableFormats(Format[] patternsArray) {
+    private void showAvailableFormats() {
         System.out.println("Dostępne formaty danych:");
-        for (Format format : patternsArray) {
-            System.out.println(format.getFormat());
+        for (Format format : PATTERNS) {
+            System.out.println(format);
         }
     }
 
-    private ZonedDateTime getDateTime(Scanner scanner, Format[] patternsArray) {
-        showAvailableFormats(patternsArray);
+    private ZonedDateTime getDateTime(Scanner scanner) {
+        showAvailableFormats();
         System.out.println("Podaj datę:");
         String userInput = scanner.nextLine();
         LocalDateTime localDateTime;
         ZonedDateTime zonedDateTime = null;
-        for (Format format : patternsArray) {
+        for (Format format : PATTERNS) {
             try {
                 DateTimeFormatter pattern = DateTimeFormatter.ofPattern(format.getFormat());
                 TemporalAccessor temporalAccessor = pattern.parse(userInput);
-                if (format.getFormat().equals(Format.DATE_WITH_DASH.getFormat())) {
+                if (format.isOnlyDate()) {
                     LocalDate date = LocalDate.from(temporalAccessor);
-                    localDateTime = date.atTime(0, 0, 0);
+                    localDateTime = date.atTime(LocalTime.MIDNIGHT);
 
                 } else {
                     localDateTime = LocalDateTime.from(temporalAccessor);
@@ -73,26 +62,11 @@ public class Main {
         return zonedDateTime;
     }
 
-    private String getTimeAtZone(ZonedDateTime zonedDateTime, String zoneName) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Format.DATE_TIME_WITH_DASH.getFormat());
-        ZoneId utcZone = ZoneId.of(zoneName);
-        ZonedDateTime result = zonedDateTime.withZoneSameInstant(utcZone);
-        return result.format(formatter);
-    }
-
-    enum Format {
-        DATE_TIME_WITH_DASH("yyyy-MM-dd HH:mm:ss"),
-        DATE_WITH_DASH("yyyy-MM-dd"),
-        DATE_TIME_WITH_DOT("dd.MM.yyyy HH:mm:ss");
-
-        private final String format;
-
-        Format(String format) {
-            this.format = format;
-        }
-
-        public String getFormat() {
-            return format;
+    private void showTimeAtDifferentZones(ZonedDateTime zonedDateTime) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DISPLAY_PATTERN);
+        for (Zone zone : Zone.values()) {
+            ZonedDateTime result = zonedDateTime.withZoneSameInstant(zone.getZoneId());
+            System.out.println(zone.getDisplayName() + ": " + result.format(formatter));
         }
     }
 }
